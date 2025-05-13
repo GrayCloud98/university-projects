@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 import joblib
 
 # === Configurable Gesture Names ===
-gestures = ['Tornado', 'SlashSlash', 'Avada KedavraAvada Kedavra']
+gestures = ['Tornado', 'Slash', 'Avada Kedavra']
 
 # === Load Data ===
 X = []

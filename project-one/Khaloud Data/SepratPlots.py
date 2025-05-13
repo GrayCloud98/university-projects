@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import glob
 import os
 
-directory = "C:/Users/Admin/PycharmProjects/group-c/project-one/Khaloud Data/Rock"
+directory = "C:/Users/Admin/PycharmProjects/group-c/project-one/Khaloud Data/Tornado"
 csv_files = glob.glob(os.path.join(directory, "recording-*.csv"))
 
 if not csv_files:

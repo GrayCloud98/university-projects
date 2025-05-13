@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load CSV and use semicolon separator
-df = pd.read_csv("Scissors/recording-20250506-171134.csv", sep=';')
+df = pd.read_csv("Avada Kedavra/recording-20250506-171134.csv", sep=';')
 
 
 # Convert time from ms to seconds

@@ -89,8 +89,11 @@ def main():
 
     # Process on button click
     if get_btn:
+        if not original_text.strip() and uploaded:
+            original_text = uploaded.read().decode(errors="ignore")
+
         if not original_text.strip():
-            st.warning("Please enter some text first.")
+            st.warning("Please enter your report text.")
             return
 
         with st.spinner("Processing your text..."):

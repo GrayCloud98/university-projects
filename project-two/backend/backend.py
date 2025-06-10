@@ -1,18 +1,14 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import httpx
 from typing import Dict, Any
 
 """
 LLM Writing Assistant Backend
 
 This FastAPI application serves as the backend for the LLM Writing Assistant.
-It provides an endpoint that simulates LLM-based text improvements and corrections.
-
-Students are expected to expand this template by:
-1. Implementing actual Ollama integration
-2. Enhancing the text processing logic
-3. Adding additional endpoints as needed
+It provides an endpoint that integrates with a local Ollama-hosted LLM for text improvements.
 """
 
 app = FastAPI(title="LLM Writing Assistant API")
@@ -25,64 +21,85 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def assist_report(text: str, mode: str = "full", weight: float = 0.5) -> str:
-    """
-    Simulate LLM-based assistance for report editing.
-    
-    This is a placeholder function. Students should replace this with actual
-    Ollama integration to provide real text improvements.
-    
-    Parameters:
-        text (str): The original text to be improved
-        mode (str): Either "full" for comprehensive improvements or "grammar" for grammar-only corrections
-        weight (float): A value between 0.0 and 1.0 that determines how much the suggestions influence the result
-                        0.0 = original text only, 1.0 = fully revised text
-    
-    Returns:
-        str: The assisted/improved text
-    """
+PROMPTS = {
+    "grammar": {
+        "system": (
+            "You are a meticulous English grammar assistant. "
+            "ONLY fix grammar, punctuation, and minor style issues. "
+            "PRESERVE the original meaning and style. "
+            "NEVER add introductory phrases or explanations. "
+            "NEVER say 'here is a rewritten version' or similar. "
+            "OUTPUT ONLY THE CORRECTED TEXT, NOTHING ELSE. "
+        ),
+    },
+    "full": {
+        "system": (
+            "You are an expert writing coach. "
+            "Improve clarity, coherence, style, and grammar. "
+            "NEVER add introductory phrases or explanations. "
+            "NEVER say 'here is a rewritten version' or similar. "
+            "OUTPUT ONLY THE IMPROVED TEXT, NOTHING ELSE. "
+        ),
+    },
+}
+
+
+def make_system_prompt(mode: str, weight: str) -> str:
+    base_prompt = PROMPTS.get(mode, PROMPTS["full"])["system"]
+
+    if mode == "full":
+        weight = weight.lower()
+        if weight == "light":
+            return base_prompt + (
+                " Make only minor corrections, such as fixing grammar, spelling, and punctuation. "
+                "Do not rephrase or restructure sentences. Preserve the original voice and style."
+            )
+        elif weight == "moderate":
+            return base_prompt + (
+                " Improve grammar, style, and clarity. You may rephrase awkward sentences, "
+                "but keep the author's tone and structure mostly intact."
+            )
+        else:
+            return base_prompt + (
+                " Revise the text freely to enhance clarity, coherence, and academic tone. "
+                "You may rewrite, restructure, or improve the vocabulary as needed, "
+                "as long as the original meaning is preserved."
+            )
+
+    return base_prompt
+
+
+async def assist_report(text: str, mode: str = "full", weight: str = "moderate") -> str:
     if not text:
         return ""
-        
-    # This is just a placeholder implementation
-    if mode == "grammar":
-        # In a real implementation, this would only fix grammar issues
-        grammar_corrections = f"Grammar-corrected: {text}"
-        # Simulate applying the weight between original and corrected text
-        return text if weight < 0.1 else grammar_corrections
-    else:
-        # In a real implementation, this would do a comprehensive revision
-        full_revision = f"Completely revised: {text}"
-        # Simulate applying the weight between original and revised text
-        if weight < 0.3:
-            return text
-        elif weight < 0.7:
-            return f"Partially improved: {text}"
-        else:
-            return full_revision
+
+    system_prompt = make_system_prompt(mode, weight)
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": text}
+    ]
+
+    # No timeout for long LLM responses
+    async with httpx.AsyncClient(timeout=None) as client:
+        response = await client.post(
+            "http://127.0.0.1:11434/v1/chat/completions",
+            json={"model": "llama3:8b", "messages": messages}
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
+
 
 @app.post("/assist")
 async def assist_endpoint(request: Request) -> Dict[str, Any]:
-    """
-    API endpoint that accepts a seminar report draft and returns an improved version.
-    
-    Expects a JSON payload with:
-    - text: The original seminar report text
-    - mode: The correction mode ("full" or "grammar")
-    - weight: A float value between 0.0 and 1.0 determining the influence of suggestions
-    
-    Returns:
-        Dict containing the assisted text
-    """
     data = await request.json()
     original_text = data.get("text", "")
     mode = data.get("mode", "full")
-    weight = data.get("weight", 0.5)
-    
-    # Process the text with the assist_report function
-    assisted_text = assist_report(original_text, mode, weight)
-    
+    weight = data.get("weight", "moderate")
+
+    assisted_text = await assist_report(original_text, mode, weight)
     return {"assisted_text": assisted_text}
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)

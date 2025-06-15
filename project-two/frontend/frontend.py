@@ -17,7 +17,6 @@ st.markdown(
 
 API_URL = "http://127.0.0.1:8000"
 
-# Initialize session state
 if "history" not in st.session_state:
     st.session_state.history = []
 
@@ -26,7 +25,6 @@ if "revised_text" not in st.session_state:
 
 if "submitted" not in st.session_state:
     st.session_state.submitted = False
-
 
 def send_text_for_assistance(text: str, mode: str, weight: str) -> Dict[str, Any]:
     payload = {"text": text, "mode": mode, "weight": weight}
@@ -37,11 +35,9 @@ def send_text_for_assistance(text: str, mode: str, weight: str) -> Dict[str, Any
         st.error("Error connecting to the backend.")
         return {"assisted_text": ""}
 
-
 def display_diff(original: str, revised: str) -> str:
     diff = difflib.ndiff(original.splitlines(), revised.splitlines())
     return "\n".join(diff)
-
 
 def main():
     st.title("LLM Writing Assistant")
@@ -54,13 +50,13 @@ def main():
 
         uploaded = st.file_uploader("Or upload a .txt file:", type=["txt"])
 
-        mode = st.radio("Select correction mode:", ["full", "grammar"], horizontal=True)
+        mode = st.radio("Select correction mode:", ["full", "grammar", "rewrite", "summarize"], horizontal=True)
 
         if mode == "full":
             weight = st.select_slider("Editing intensity:",
                                       options=["Light", "Moderate", "Heavy"],
                                       value="Moderate")
-        else:
+        elif mode in ["grammar", "rewrite", "summarize"]:
             weight = "Moderate"
             st.select_slider("Editing intensity:",
                              options=["Light", "Moderate", "Heavy"],
@@ -124,7 +120,6 @@ def main():
         with st.expander("Revision History"):
             for i, version in enumerate(st.session_state.history, 1):
                 st.text_area(f"Version {i}", version, height=100)
-
 
 if __name__ == "__main__":
     main()

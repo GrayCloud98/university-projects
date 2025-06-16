@@ -26,6 +26,7 @@ if "revised_text" not in st.session_state:
 if "submitted" not in st.session_state:
     st.session_state.submitted = False
 
+
 def send_text_for_assistance(text: str, mode: str, weight: str) -> Dict[str, Any]:
     payload = {"text": text, "mode": mode, "weight": weight}
     try:
@@ -35,9 +36,11 @@ def send_text_for_assistance(text: str, mode: str, weight: str) -> Dict[str, Any
         st.error("Error connecting to the backend.")
         return {"assisted_text": ""}
 
+
 def display_diff(original: str, revised: str) -> str:
     diff = difflib.ndiff(original.splitlines(), revised.splitlines())
     return "\n".join(diff)
+
 
 def main():
     st.title("LLM Writing Assistant")
@@ -84,19 +87,17 @@ def main():
                      value=st.session_state.revised_text,
                      height=300,
                      label_visibility="hidden")
-        st.button("🔊", key="speaker_button")
+        if st.session_state.submitted and st.session_state.revised_text:
+            mp3 = io.BytesIO()
+            gTTS(st.session_state.revised_text).write_to_fp(mp3)
+            mp3.seek(0)
+            st.audio(mp3, format="audio/mp3")
 
     if st.session_state.submitted and st.session_state.revised_text:
         st.download_button("Download Revised Text",
                            st.session_state.revised_text,
                            "revised_report.txt",
                            mime="text/plain")
-
-        mp3 = io.BytesIO()
-        gTTS(st.session_state.revised_text).write_to_fp(mp3)
-        mp3.seek(0)
-        st.audio(mp3, format="audio/mp3")
-
         if uploaded:
             uploaded.seek(0)
             raw = uploaded.read().decode(errors="ignore")
@@ -120,6 +121,7 @@ def main():
         with st.expander("Revision History"):
             for i, version in enumerate(st.session_state.history, 1):
                 st.text_area(f"Version {i}", version, height=100)
+
 
 if __name__ == "__main__":
     main()

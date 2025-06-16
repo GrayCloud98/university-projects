@@ -43,7 +43,8 @@ PROMPTS = {
     },
     "rewrite": {
         "system": (
-            "You are a professional rewriter. Completely rephrase the user's text to make it clearer, more fluent, and engaging. "
+            "You are a professional rewriter. Completely rephrase the user's text to make it clearer, more fluent, "
+            "and engaging."
             "Do not preserve the exact sentence structure. Use your judgment to enhance readability. "
             "NEVER add any comments or prefaces. "
             "OUTPUT ONLY THE REWRITTEN TEXT, NOTHING ELSE. "

@@ -49,7 +49,6 @@ def main():
     with col1:
         st.subheader("Report Draft")
         original_text = st.text_area("Enter your report draft here:", height=300)
-        st.button("🎤", key="mic_button")
 
         uploaded = st.file_uploader("Or upload a .txt file:", type=["txt"])
 
@@ -102,21 +101,25 @@ def main():
             uploaded.seek(0)
             raw = uploaded.read().decode(errors="ignore")
             st.subheader("Uploaded Text")
-            st.text_area("", raw, height=150, label_visibility="hidden")
-            st.subheader("Diff with Uploaded File")
-            st.text_area("",
-                         display_diff(raw, st.session_state.revised_text),
-                         height=150,
-                         label_visibility="hidden")
-
-        st.subheader("Differences")
-        st.text_area("Diff Viewer:", display_diff(original_text, st.session_state.revised_text), height=200)
+            st.text_area("", raw, height=150, disabled=True)
 
         st.subheader("Feedback")
-        agree = st.radio("Was this revision helpful?", ["👍 Yes", "👎 No"], key="feedback_radio")
-        comment = st.text_input("Any feedback?", key="feedback_input")
-        if st.button("Submit Feedback"):
-            st.success("Thanks for your feedback!")
+
+        if "feedback_log" not in st.session_state:
+            st.session_state.feedback_log = []
+
+        with st.form("feedback_form"):
+            agree = st.radio("Was this revision helpful?", ["👍 Yes", "👎 No"], key="feedback_radio")
+            comment = st.text_area("Leave a comment (optional):", key="feedback_input")
+            submitted = st.form_submit_button("Submit Feedback")
+
+        if submitted:
+            st.session_state.feedback_log.append({
+                "useful": agree,
+                "comment": comment,
+                "text_version": st.session_state.revised_text
+            })
+            st.success("✅ Feedback submitted!")
 
         with st.expander("Revision History"):
             for i, version in enumerate(st.session_state.history, 1):

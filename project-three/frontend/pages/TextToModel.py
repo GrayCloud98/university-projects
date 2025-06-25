@@ -50,3 +50,4 @@ if st.button("Generate Model"):
                         st.error(data.get("error", "Unknown error occurred."))
             except requests.RequestException as e:
                 st.error(f"Request failed: {e}")
+

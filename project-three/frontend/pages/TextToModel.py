@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import time
-from utils.viewer import render_glb_viewer
+from utils.viewer import *
 
 st.title("🔷 3D Model Generator")
 st.write("Enter a prompt to generate a 3D model (.glb format).")
@@ -50,3 +50,4 @@ if st.button("Generate Model"):
                         st.error(data.get("error", "Unknown error occurred."))
             except requests.RequestException as e:
                 st.error(f"Request failed: {e}")
+

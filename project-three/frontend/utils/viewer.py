@@ -7,75 +7,41 @@ def render_glb_viewer(asset_id: str):
     <!DOCTYPE html>
     <html>
     <head>
-      <style> body {{ margin: 0; }} </style>
       <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
       <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     </head>
-    <body>
-      <div id="viewer" style="width: 100%; height: 500px;"></div>
+    <body style="margin: 0; overflow: hidden;">
       <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xf0f0f0);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({{ antialias: true }});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / 500, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, 500);
-        document.getElementById("viewer").appendChild(renderer.domElement);
+        const light = new THREE.AmbientLight(0xffffff, 1);
+        scene.add(light);
 
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-        hemiLight.position.set(0, 20, 0);
-        scene.add(hemiLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-        dirLight.position.set(3, 10, 10);
-        scene.add(dirLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(5, 10, 7.5);
+        scene.add(directionalLight);
 
         const loader = new THREE.GLTFLoader();
-        loader.load("{glb_url}",
-          function (gltf) {{
-            const model = gltf.scene;
-            scene.add(model);
+        loader.load("{glb_url}", function(gltf) {{
+          console.log("Model loaded:", gltf);
+          gltf.scene.position.set(0, 0, 0);
+          scene.add(gltf.scene);
+          camera.position.z = 10;
 
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-
-            // Center the model
-            model.position.sub(center);
-
-            // Fit camera to object
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const fov = camera.fov * (Math.PI / 180);
-            const cameraZ = maxDim / (2 * Math.tan(fov / 2));
-            camera.position.set(0, maxDim * 0.5, cameraZ * 1.2);
-            camera.lookAt(0, 0, 0);
-            camera.near = 0.1;
-            camera.far = 1000;
-            camera.updateProjectionMatrix();
-            controls.update();
-
-            function animate() {{
-              requestAnimationFrame(animate);
-              controls.update();
-              renderer.render(scene, camera);
-            }}
-            animate();
-          }},
-          undefined,
-          function (error) {{
-            const msg = document.createElement('div');
-            msg.innerText = 'Failed to load model: ' + error;
-            msg.style.color = 'red';
-            document.getElementById("viewer").appendChild(msg);
+          function animate() {{
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
           }}
-        );
+          animate();
+        }}, undefined, function(error) {{
+          console.error("Error loading model:", error);
+        }});
       </script>
     </body>
     </html>
     """
-    components.html(viewer_html, height=520)
+    components.html(viewer_html, height=600)

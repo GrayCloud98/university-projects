@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse, Response
+from fastapi import FastAPI, Request, UploadFile, File
+from fastapi.responses import StreamingResponse, Response, JSONResponse
 from generio_api import *
 
 import requests
@@ -27,6 +27,16 @@ async def text_to_model(request: Request):
     prompt = data.get("prompt", "")
     result = generate_model(prompt)
     return result
+
+
+@app.post("/generate/sketch-to-model")
+async def sketch_to_model(file: UploadFile = File(...)):
+    try:
+        image_bytes = await file.read()
+        result = generate_model_from_sketch(image_bytes)
+        return result
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 
 @app.get("/status/{asset_id}")

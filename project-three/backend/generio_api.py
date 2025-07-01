@@ -1,5 +1,6 @@
 import os
 import requests
+import base64
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -32,7 +33,11 @@ def _generate_asset(endpoint: str, payload: dict, preview_type: str, mock_prefix
             return {"success": False, "error": "No asset ID returned."}
         asset_id = assets[0]["id"]
 
-        share_response = requests.put(f"{API_BASE}/assets/{asset_id}/shared", json={"shared": 1}, headers=HEADERS)
+        share_response = requests.put(
+            f"{API_BASE}/assets/{asset_id}/shared",
+            json={"shared": 1},
+            headers=HEADERS
+        )
         share_response.raise_for_status()
 
         url = f"{API_BASE}/assets/{asset_id}/shared/files/default/{preview_type}.{file_ext}"
@@ -105,3 +110,66 @@ def is_model_ready(asset_id: str, file_key: str = "default") -> bool:
         return status.lower() == "ready"
     except requests.RequestException:
         return False
+
+
+def generate_model_from_sketch(image_bytes: bytes):
+    if USE_MOCK:
+        return {
+            "success": True,
+            "source": "mock",
+            "id": "mock-sketch-id",
+            "url": "https://via.placeholder.com/512x512.png?text=SketchModel"
+        }
+
+    try:
+        base64_img = base64.b64encode(image_bytes).decode("utf-8")
+        data_url = f"data:image/png;base64,{base64_img}"
+
+        asset_resp = requests.post(
+            f"{API_BASE}/assets",
+            json={
+                "app": "library",
+                "file_key": "default",
+                "file_data": data_url,
+                "file_details": {},
+                "file_process": {"mode": "limit", "resolution": 1024},
+                "additional": {},
+                "shared": 0
+            },
+            headers=HEADERS
+        )
+        asset_resp.raise_for_status()
+        asset_id = asset_resp.json()["assets"][0]["id"]
+
+        model_resp = requests.post(
+            f"{API_BASE}/models/from-assets",
+            json={
+                "app": "sketch",
+                "assets": [{"id": asset_id, "file_key": "default"}],
+                "seeds": [-1],
+                "quality": "high",
+                "keep_ratio": 0.95,
+                "geometry_adherence": 7.5,
+                "material_adherence": 3,
+                "material_active": True,
+                "additional": {}
+            },
+            headers=HEADERS
+        )
+        model_resp.raise_for_status()
+        model_id = model_resp.json()["assets"][0]["id"]
+
+        share_resp = requests.put(
+            f"{API_BASE}/assets/{model_id}/shared",
+            json={"shared": 1},
+            headers=HEADERS
+        )
+        share_resp.raise_for_status()
+
+        return {
+            "success": True,
+            "id": model_id
+        }
+
+    except requests.RequestException as e:
+        return {"success": False, "error": str(e)}

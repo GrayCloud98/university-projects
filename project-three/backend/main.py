@@ -47,7 +47,7 @@ async def get_status(asset_id: str):
 @app.get("/proxy-glb/{asset_id}")
 def proxy_glb(asset_id: str):
     if not is_model_ready(asset_id):
-        return Response(content="Model not ready for proxying", status_code=425)  # 425 Too Early
+        return Response(content="Model not ready for proxying", status_code=425)
 
     url = f"https://test-api.generio.ai/assets/{asset_id}/shared/files/default/preview.glb"
     try:

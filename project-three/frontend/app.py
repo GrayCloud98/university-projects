@@ -23,7 +23,6 @@ def display_image(result):
         if url:
             st.markdown(f"**🔗 [Open Image in New Tab]({url})**", unsafe_allow_html=True)
 
-            # Retry logic: Try fetching image for up to 10 seconds
             for i in range(5):
                 try:
                     resp = requests.get(url)
@@ -32,7 +31,7 @@ def display_image(result):
                         return
                 except:
                     pass
-                time.sleep(2)  # wait before retrying
+                time.sleep(2)
 
             st.warning("The image is still being processed. Try again shortly.")
         else:
@@ -41,7 +40,6 @@ def display_image(result):
         st.warning("Unknown image source format.")
 
 
-# UI input
 prompt = st.text_input("Enter a prompt to generate an image:")
 
 if st.button("Generate"):

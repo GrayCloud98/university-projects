@@ -16,14 +16,13 @@ canvas_result = st_canvas(
     stroke_width=6,
     stroke_color="#000000",
     background_color="#ffffff",
-    height=280,
-    width=280,
+    height=480,
+    width=690,
     drawing_mode="freedraw",
     key="canvas"
 )
 
 
-# Polling utility to wait for model preview
 def wait_for_model_ready(asset_id, max_retries=15, delay=3):
     url = f"http://localhost:8000/proxy-glb/{asset_id}"
     for _ in range(max_retries):
@@ -34,21 +33,18 @@ def wait_for_model_ready(asset_id, max_retries=15, delay=3):
     return False
 
 
-# Submit Button
 if st.button("Generate Model"):
     if canvas_result.image_data is None:
         st.warning("Please draw something before generating.")
     else:
         with st.spinner("Uploading sketch and generating model..."):
             try:
-                # Convert canvas to PNG
                 img = Image.fromarray(canvas_result.image_data.astype("uint8"))
                 img = img.convert("L")  # optional: grayscale
                 img_byte_arr = io.BytesIO()
                 img.save(img_byte_arr, format="PNG")
                 img_byte_arr.seek(0)
 
-                # Send image to FastAPI backend
                 files = {"file": ("sketch.png", img_byte_arr, "image/png")}
                 response = requests.post(
                     "http://localhost:8000/generate/sketch-to-model",

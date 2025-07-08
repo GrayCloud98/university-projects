@@ -112,7 +112,7 @@ def is_model_ready(asset_id: str, file_key: str = "default") -> bool:
         return False
 
 
-def generate_model_from_sketch(image_bytes: bytes):
+def generate_model_from_sketch(image_bytes: bytes, prompt: str = None):
     if USE_MOCK:
         return {
             "success": True,
@@ -141,19 +141,24 @@ def generate_model_from_sketch(image_bytes: bytes):
         asset_resp.raise_for_status()
         asset_id = asset_resp.json()["assets"][0]["id"]
 
+        model_payload = {
+            "app": "sketch",
+            "assets": [{"id": asset_id, "file_key": "default"}],
+            "seeds": [-1],
+            "quality": "high",
+            "keep_ratio": 0.95,
+            "geometry_adherence": 7.5,
+            "material_adherence": 3,
+            "material_active": True,
+            "additional": {}
+        }
+
+        if prompt:
+            model_payload["prompt_positive"] = prompt
+
         model_resp = requests.post(
             f"{API_BASE}/models/from-assets",
-            json={
-                "app": "sketch",
-                "assets": [{"id": asset_id, "file_key": "default"}],
-                "seeds": [-1],
-                "quality": "high",
-                "keep_ratio": 0.95,
-                "geometry_adherence": 7.5,
-                "material_adherence": 3,
-                "material_active": True,
-                "additional": {}
-            },
+            json=model_payload,
             headers=HEADERS
         )
         model_resp.raise_for_status()

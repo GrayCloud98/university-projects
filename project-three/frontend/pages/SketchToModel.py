@@ -10,11 +10,12 @@ st.set_page_config(page_title="Sketch to Model", layout="centered")
 st.title("🎨 Sketch to 3D Model")
 st.write("Draw a sketch below and convert it to a 3D model (.glb).")
 
-# Canvas UI
+stroke_color = st.color_picker("🖌️ Choose a stroke color", "#000000")
+
 canvas_result = st_canvas(
     fill_color="rgba(0, 0, 0, 0)",
     stroke_width=6,
-    stroke_color="#000000",
+    stroke_color=stroke_color,
     background_color="#ffffff",
     height=480,
     width=690,
@@ -23,7 +24,7 @@ canvas_result = st_canvas(
 )
 
 
-def wait_for_model_ready(asset_id, max_retries=15, delay=3):
+def wait_for_model_ready(asset_id, max_retries=23, delay=3):
     url = f"http://localhost:8000/proxy-glb/{asset_id}"
     for _ in range(max_retries):
         r = requests.get(url)
@@ -33,6 +34,8 @@ def wait_for_model_ready(asset_id, max_retries=15, delay=3):
     return False
 
 
+prompt = st.text_input("✏️ Describe your sketch (optional)", placeholder="e.g. A simple cube")
+
 if st.button("Generate Model"):
     if canvas_result.image_data is None:
         st.warning("Please draw something before generating.")
@@ -40,15 +43,17 @@ if st.button("Generate Model"):
         with st.spinner("Uploading sketch and generating model..."):
             try:
                 img = Image.fromarray(canvas_result.image_data.astype("uint8"))
-                img = img.convert("L")  # optional: grayscale
                 img_byte_arr = io.BytesIO()
                 img.save(img_byte_arr, format="PNG")
                 img_byte_arr.seek(0)
 
                 files = {"file": ("sketch.png", img_byte_arr, "image/png")}
+                data = {"prompt": prompt} if prompt else {}
+
                 response = requests.post(
                     "http://localhost:8000/generate/sketch-to-model",
-                    files=files
+                    files=files,
+                    data=data
                 )
 
                 if response.status_code != 200:

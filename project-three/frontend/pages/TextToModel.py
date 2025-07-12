@@ -7,12 +7,13 @@ st.title("🔷 3D Model Generator")
 st.write("Enter a prompt to generate a 3D model (.glb format).")
 
 
-def wait_for_proxy_ready(asset_id: str, max_retries: int = 15, delay: int = 3) -> bool:
-    proxy_url = f"http://localhost:8000/proxy-glb/{asset_id}"
+def wait_for_model_ready(asset_id: str, max_retries: int = 20, delay: int = 3) -> bool:
     for _ in range(max_retries):
-        proxy_check = requests.get(proxy_url)
-        if proxy_check.status_code == 200:
-            return True
+        status_resp = requests.get(f"http://localhost:8000/status/{asset_id}")
+        if status_resp.status_code == 200:
+            status_data = status_resp.json()
+            if status_data.get("status") == "ready":
+                return True
         time.sleep(delay)
     return False
 
@@ -38,7 +39,7 @@ if st.button("Generate Model"):
 
                         st.info("Waiting for model preview to be ready...")
 
-                        if wait_for_proxy_ready(asset_id):
+                        if wait_for_model_ready(asset_id):
                             model_url = f"https://test-api.generio.ai/assets/{asset_id}/shared/files/default/preview.glb"
                             st.success("Model is ready!")
                             st.markdown(f"[🔗 Download .glb Model]({model_url})", unsafe_allow_html=True)

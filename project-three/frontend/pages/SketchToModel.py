@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import time
 import io
+import numpy as np
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 from utils.viewer import *
@@ -24,21 +25,35 @@ canvas_result = st_canvas(
 )
 
 
-def wait_for_model_ready(asset_id, max_retries=23, delay=3):
-    url = f"http://localhost:8000/proxy-glb/{asset_id}"
+def is_canvas_empty(image_data):
+    if image_data is None:
+        return True
+    grayscale = np.mean(image_data, axis=2)
+    return np.all(grayscale == 255)
+
+
+def wait_for_model_ready(asset_id: str, max_retries: int = 23, delay: int = 3) -> bool:
+    url = f"http://localhost:8000/status/{asset_id}"
     for _ in range(max_retries):
-        r = requests.get(url)
-        if r.status_code == 200:
-            return True
-        time.sleep(delay)
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                return True
+            elif response.status_code == 425:
+                time.sleep(delay)
+                continue
+            else:
+                return False
+        except requests.RequestException:
+            time.sleep(delay)
     return False
 
 
 prompt = st.text_input("✏️ Describe your sketch (optional)", placeholder="e.g. A simple cube")
 
 if st.button("Generate Model"):
-    if canvas_result.image_data is None:
-        st.warning("Please draw something before generating.")
+    if is_canvas_empty(canvas_result.image_data):
+        st.warning("Please draw something on the canvas before generating a model.")
     else:
         with st.spinner("Uploading sketch and generating model..."):
             try:

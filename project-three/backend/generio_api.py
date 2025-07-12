@@ -1,3 +1,4 @@
+"""
 import os
 import requests
 import base64
@@ -53,9 +54,9 @@ def _generate_asset(endpoint: str, payload: dict, preview_type: str, mock_prefix
         return {"success": False, "error": str(e)}
 
 
-def generate_image(prompt: str):
+def generate_image(prompt: str, as_sketch: bool = False):
     payload = {
-        "app": "generio-ui-dev",
+        "app": "sketch" if as_sketch else "generio-ui-dev",
         "prompt_positive": prompt,
         "resolution": 1024,
         "diffusion": {
@@ -65,6 +66,11 @@ def generate_image(prompt: str):
             "steps": 6
         }
     }
+
+    if as_sketch:
+        payload["style"] = "sketch"
+        payload["prompt_negative"] = "photorealistic, 3d render, color, detailed background"
+
     return _generate_asset("/images/from-prompt", payload, preview_type="preview", mock_prefix="Image")
 
 
@@ -102,13 +108,15 @@ def check_asset_status(asset_id: str, file_key: str = "default"):
         return {"success": False, "error": str(e)}
 
 
-def is_model_ready(asset_id: str, file_key: str = "default") -> bool:
+def is_model_ready(asset_id: str) -> bool:
+    url = f"https://test-api.generio.ai/assets/{asset_id}/status"
+    print(f"[STATUS] Checking asset status at: {url}")
     try:
-        r = requests.get(f"{API_BASE}/assets/{asset_id}/files/{file_key}/status", headers=HEADERS)
-        r.raise_for_status()
-        status = r.json().get("status", "")
-        return status.lower() == "ready"
-    except requests.RequestException:
+        response = requests.get(url)
+        print(f"[STATUS] Got response {response.status_code}: {response.text}")
+        return response.status_code == 200 and "ready" in response.text.lower()
+    except Exception as e:
+        print(f"[STATUS ERROR] {e}")
         return False
 
 
@@ -178,3 +186,72 @@ def generate_model_from_sketch(image_bytes: bytes, prompt: str = None):
 
     except requests.RequestException as e:
         return {"success": False, "error": str(e)}
+
+
+def generate_model_from_image(image_bytes: bytes, prompt: str = None):
+    if USE_MOCK:
+        return {
+            "success": True,
+            "source": "mock",
+            "id": "mock-image-id",
+            "url": "https://via.placeholder.com/512x512.png?text=ImageModel"
+        }
+
+    try:
+        base64_img = base64.b64encode(image_bytes).decode("utf-8")
+        data_url = f"data:image/png;base64,{base64_img}"
+
+        asset_resp = requests.post(
+            f"{API_BASE}/assets",
+            json={
+                "app": "library",
+                "file_key": "default",
+                "file_data": data_url,
+                "file_details": {},
+                "file_process": {"mode": "limit", "resolution": 1024},
+                "additional": {},
+                "shared": 0
+            },
+            headers=HEADERS
+        )
+        asset_resp.raise_for_status()
+        asset_id = asset_resp.json()["assets"][0]["id"]
+
+        model_payload = {
+            "app": "library",  # or "generio-ui-dev" if needed
+            "assets": [{"id": asset_id, "file_key": "default"}],
+            "seeds": [-1],
+            "quality": "high",
+            "keep_ratio": 0.95,
+            "geometry_adherence": 7.5,
+            "material_adherence": 3,
+            "material_active": True,
+            "additional": {}
+        }
+
+        if prompt:
+            model_payload["prompt_positive"] = prompt
+
+        model_resp = requests.post(
+            f"{API_BASE}/models/from-assets",
+            json=model_payload,
+            headers=HEADERS
+        )
+        model_resp.raise_for_status()
+        model_id = model_resp.json()["assets"][0]["id"]
+
+        share_resp = requests.put(
+            f"{API_BASE}/assets/{model_id}/shared",
+            json={"shared": 1},
+            headers=HEADERS
+        )
+        share_resp.raise_for_status()
+
+        return {
+            "success": True,
+            "id": model_id
+        }
+
+    except requests.RequestException as e:
+        return {"success": False, "error": str(e)}
+"""

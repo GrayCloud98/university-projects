@@ -42,7 +42,7 @@ def display_image(result):
 
 prompt = st.text_input("Enter a prompt to generate an image:")
 
-if st.button("Generate"):
+if st.button("Generate Image"):
     if not prompt:
         st.warning("Please enter a prompt before generating.")
     else:
